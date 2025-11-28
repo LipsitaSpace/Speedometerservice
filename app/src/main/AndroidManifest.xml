@@ -16,7 +16,9 @@
         <service
             android:name=".SimulatorService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true">
+            <action android:name="com.example.simulatorservice.SimulatorService" />
+        </service>
 
         <activity
             android:name=".MainActivity"
