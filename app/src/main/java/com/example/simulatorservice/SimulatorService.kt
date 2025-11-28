@@ -2,6 +2,7 @@ package com.example.simulatorservice
 
 import android.app.Service
 import android.content.Intent
+import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
@@ -14,16 +15,19 @@ import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.Socket
+import java.util.Locale
 
 class SimulatorService : Service() {
 
-    private var TAG = "Service"
+    private var TAG = "SimulatorService"
 
     val speedLive = MutableLiveData<Float>()
     val distanceLive = MutableLiveData<Float>()
     val timeLive = MutableLiveData<String>()
     val modeChange  = MutableLiveData<String>()
     val ignState   = MutableLiveData<String>()
+    val unitLive = MutableLiveData<String>()
+
 
     private var job : Job? = null
     private var socket : Socket? = null
@@ -56,12 +60,16 @@ class SimulatorService : Service() {
                             val time = json.getString("system_time")
                             val mode = json.getString("mode")
                             val ign = json.getString("ignition")
+                            val unit = json.getString("unit")
 
 
                             speedLive.postValue(speed)
                             distanceLive.postValue(distance)
                             timeLive.postValue(time)
                             modeChange.postValue(mode)
+                            ignState.postValue(ign)
+                            unitLive.postValue(unit)
+
                         } catch(e : Exception){
                             Log.e(TAG,"JSON parse error $e")
                         }
@@ -74,7 +82,23 @@ class SimulatorService : Service() {
         }
     }
 
+
+
+    private val binder: ISimulatorInterface.Stub = object : ISimulatorInterface.Stub() {
+        override fun getData(data: Bundle?) {
+            val bundle = Bundle()
+            bundle.putFloat("speed", speedLive.value ?: 0f)
+            bundle.putFloat("distance", distanceLive.value ?: 0f)
+            bundle.putLong("systemTime", timeLive.value?.toLong() ?: 0L)
+            bundle.putBoolean("ignitionState", ignState.value?.lowercase(Locale.ROOT) == "on")
+            bundle.putBoolean("mode", modeChange.value?.lowercase(Locale.ROOT) == "day")
+            bundle.putBoolean("unit", unitLive.value?.lowercase(Locale.ROOT) == "km/h")
+
+            data?.putAll(bundle)
+        }
+    }
+
     override fun onBind(intent: Intent): IBinder {
-        TODO("Return the communication channel to the service.")
+        return binder
     }
 }
