@@ -17,7 +17,9 @@
             android:name=".SimulatorService"
             android:enabled="true"
             android:exported="true">
-            <action android:name="com.example.simulatorservice.SimulatorService" />
+             <intent-filter>
+                <action android:name="com.example.simulatorservice.SimulatorService" />
+            </intent-filter>
         </service>
 
         <activity
