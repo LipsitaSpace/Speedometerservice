@@ -85,20 +85,34 @@ class SimulatorService : Service() {
 
 
     private val binder: ISimulatorInterface.Stub = object : ISimulatorInterface.Stub() {
-        override fun getData(data: Bundle?) {
-            val bundle = Bundle()
-            bundle.putFloat("speed", speedLive.value ?: 0f)
-            bundle.putFloat("distance", distanceLive.value ?: 0f)
-            bundle.putLong("systemTime", timeLive.value?.toLong() ?: 0L)
-            bundle.putBoolean("ignitionState", ignState.value?.lowercase(Locale.ROOT) == "on")
-            bundle.putBoolean("mode", modeChange.value?.lowercase(Locale.ROOT) == "day")
-            bundle.putBoolean("unit", unitLive.value?.lowercase(Locale.ROOT) == "km/h")
-
-            data?.putAll(bundle)
+        override fun getSpeed(): Float {
+            return speedLive.value ?: 0f
         }
+
+        override fun getDistance(): Float {
+            return distanceLive.value ?: 0f
+        }
+
+        override fun getSystemTime(): Long {
+            return timeLive.value?.toLongOrNull() ?: 0L
+        }
+
+        override fun isIgnitionOn(): Boolean {
+            return ignState.value?.lowercase(Locale.ROOT) == "on"
+        }
+
+        override fun isDayMode(): Boolean {
+            return modeChange.value?.lowercase(Locale.ROOT) == "day"
+        }
+
+        override fun getUnit(): String? {
+            return unitLive.value ?: "km/h"
+        }
+
     }
 
     override fun onBind(intent: Intent): IBinder {
+        Log.d("Lipsita simulatorservice","data is $binder")
         return binder
     }
 }
