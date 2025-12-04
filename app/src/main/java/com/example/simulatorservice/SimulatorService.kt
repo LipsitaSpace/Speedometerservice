@@ -20,9 +20,13 @@ import java.util.Locale
 
 class SimulatorService : Service() {
 
-    private var TAG = "SimulatorService"
+    private var TAG = "prudvi"
 
     val speedLive = MutableLiveData<Float>()
+
+    var mySpeed : Float = 0.0f
+    var myDistance : Float = 0.0f
+    var myTime : String =""
     val distanceLive = MutableLiveData<Float>()
     val timeLive = MutableLiveData<String>()
     val modeChange  = MutableLiveData<String>()
@@ -40,6 +44,7 @@ class SimulatorService : Service() {
     }
 
     fun startSocketListener(){
+        Log.d(TAG,"INISIDE startScoketListner()")
         job = CoroutineScope(Dispatchers.IO).launch {
 
             val host = "10.0.2.2"
@@ -56,20 +61,20 @@ class SimulatorService : Service() {
                         Log.d(TAG,"value is $line")
                         try{
                             val json = org.json.JSONObject(line!!)
-                            val speed = json.getDouble("speed").toFloat()
+                             val speed = json.getDouble("speed").toFloat()
                             val distance = json.getDouble("distance").toFloat()
                             val time = json.getString("system_time")
                             val mode = json.getString("mode")
                             val ign = json.getString("ignition")
-                            val unit = json.getString("unit")
+                         //   val unit = json.getString("unit")
 
 
-                            speedLive.postValue(speed)
-                            distanceLive.postValue(distance)
-                            timeLive.postValue(time)
+                            mySpeed = speed
+                            myDistance = distance
+                            myTime = time
                             modeChange.postValue(mode)
                             ignState.postValue(ign)
-                            unitLive.postValue(unit)
+                            //unitLive.postValue(unit)
 
                         } catch(e : Exception){
                             Log.e(TAG,"JSON parse error $e")
@@ -87,19 +92,34 @@ class SimulatorService : Service() {
 
     private val binder: ISimulatorInterface.Stub = object : ISimulatorInterface.Stub() {
         override fun getData(data: Bundle?) {
+            Log.d(TAG,"getData() in service")
             val bundle = Bundle()
             bundle.putFloat("speed", speedLive.value ?: 0f)
             bundle.putFloat("distance", distanceLive.value ?: 0f)
             bundle.putLong("systemTime", timeLive.value?.toLong() ?: 0L)
             bundle.putBoolean("ignitionState", ignState.value?.lowercase(Locale.ROOT) == "on")
             bundle.putBoolean("mode", modeChange.value?.lowercase(Locale.ROOT) == "day")
-            bundle.putBoolean("unit", unitLive.value?.lowercase(Locale.ROOT) == "km/h")
+          //  bundle.putBoolean("unit", unitLive.value?.lowercase(Locale.ROOT) == "km/h")
+            Log.d(TAG,"Bundle data is ${bundle.toString()}")
 
             data?.putAll(bundle)
+        }
+
+        override fun getSpeed(): Float {
+            return mySpeed
+        }
+
+        override fun getDistance(): Float {
+            return myDistance
+        }
+
+        override fun getTime(): String? {
+            return myTime
         }
     }
 
     override fun onBind(intent: Intent): IBinder {
+        Log.d(TAG,"onBind()")
         return binder
     }
 }

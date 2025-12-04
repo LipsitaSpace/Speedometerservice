@@ -5,4 +5,7 @@ package com.example.simulatorservice;
 
 interface ISimulatorInterface {
     void getData(out Bundle data);
+    float getSpeed();
+    float getDistance();
+    String getTime();
 }
