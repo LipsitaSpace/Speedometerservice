@@ -2,12 +2,9 @@ package com.example.simulatorservice
 
 import android.app.Service
 import android.content.Intent
-import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,106 +17,107 @@ import java.util.Locale
 
 class SimulatorService : Service() {
 
-    private var TAG = "prudvi"
+    private var TAG = "SimulatorService"
 
-    val speedLive = MutableLiveData<Float>()
-
-    var mySpeed : Float = 0.0f
-    var myDistance : Float = 0.0f
-    var myTime : String =""
-    val distanceLive = MutableLiveData<Float>()
-    val timeLive = MutableLiveData<String>()
-    val modeChange  = MutableLiveData<String>()
-    val ignState   = MutableLiveData<String>()
-    val unitLive = MutableLiveData<String>()
+    var serviceSpeed: Float = 0.0f
+    var serviceDistance: Float = 0.0f
+    var serviceTime: String = ""
+    var serviceMode: String = ""
+    var serviceUnit: String = "km/h"
+    var serviceTotalDistance: Float = 0.0f
+    var serviceTotalTime: Float = 0.0f
 
 
-    private var job : Job? = null
-    private var socket : Socket? = null
+    private var job: Job? = null
+    private var socket: Socket? = null
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG,"Service created")
+        Log.d(TAG, "Service created")
         startSocketListener()
     }
 
-    fun startSocketListener(){
-        Log.d(TAG,"INISIDE startScoketListner()")
+    fun startSocketListener() {
+        Log.d(TAG, "INISIDE startScoketListner()")
         job = CoroutineScope(Dispatchers.IO).launch {
 
-            val host = "10.0.2.2"
+            val host = "192.168.70.212"
             val port = 5000
 
-            while (isActive){
+            while (isActive) {
 
-                try{
-                    Log.d(TAG,"connection")
-                    socket = Socket(host,port)
+                try {
+                    Log.d(TAG, "connection")
+                    socket = Socket(host, port)
                     val reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
-                    var line:String?
-                    while (reader.readLine(). also { line =  it }!= null){
-                        Log.d(TAG,"value is $line")
-                        try{
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        Log.d(TAG, "value is $line")
+                        try {
                             val json = org.json.JSONObject(line!!)
-                             val speed = json.getDouble("speed").toFloat()
-                            val distance = json.getDouble("distance").toFloat()
-                            val time = json.getString("system_time")
-                            val mode = json.getString("mode")
-                            val ign = json.getString("ignition")
-                         //   val unit = json.getString("unit")
+                            val jsonSpeed = json.getDouble("speed").toFloat()
+                            val jsonDistance = json.getDouble("distance").toFloat()
+                            val jsonTime = json.getString("system_time")
+                            val jsonMode = json.getString("mode")
+                            val jsonUnit = json.getString("unit")
+                            val jsonTotalDistance = json.getDouble("total_distance").toFloat()
+                            val jsonTotalTime = json.getDouble("total_time").toFloat()
 
 
-                            mySpeed = speed
-                            myDistance = distance
-                            myTime = time
-                            modeChange.postValue(mode)
-                            ignState.postValue(ign)
-                            //unitLive.postValue(unit)
 
-                        } catch(e : Exception){
-                            Log.e(TAG,"JSON parse error $e")
+                            serviceSpeed = jsonSpeed
+                            serviceDistance = jsonDistance
+                            serviceTime = jsonTime.substringAfter(" ")
+                            serviceMode = jsonMode
+                            serviceUnit = jsonUnit
+                            serviceTotalDistance = jsonTotalDistance
+                            serviceTotalTime = jsonTotalTime
+
+                        } catch (e: Exception) {
+                            Log.e(TAG, "JSON parse error $e")
                         }
                     }
-                } catch (e: Exception){
-                    Log.e(TAG,"Exception is thrown $e")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Exception is thrown $e")
                     delay(2000)
                 }
             }
         }
     }
 
-
-
     private val binder: ISimulatorInterface.Stub = object : ISimulatorInterface.Stub() {
-        override fun getData(data: Bundle?) {
-            Log.d(TAG,"getData() in service")
-            val bundle = Bundle()
-            bundle.putFloat("speed", speedLive.value ?: 0f)
-            bundle.putFloat("distance", distanceLive.value ?: 0f)
-            bundle.putLong("systemTime", timeLive.value?.toLong() ?: 0L)
-            bundle.putBoolean("ignitionState", ignState.value?.lowercase(Locale.ROOT) == "on")
-            bundle.putBoolean("mode", modeChange.value?.lowercase(Locale.ROOT) == "day")
-          //  bundle.putBoolean("unit", unitLive.value?.lowercase(Locale.ROOT) == "km/h")
-            Log.d(TAG,"Bundle data is ${bundle.toString()}")
-
-            data?.putAll(bundle)
-        }
 
         override fun getSpeed(): Float {
-            return mySpeed
+            return serviceSpeed
         }
 
         override fun getDistance(): Float {
-            return myDistance
+            return serviceDistance
         }
 
-        override fun getTime(): String? {
-            return myTime
+        override fun getTime(): String {
+            return serviceTime
+        }
+
+        override fun getMode(): Boolean {
+            return serviceMode.lowercase(Locale.ROOT) == "night"
+        }
+
+        override fun getUnit(): String {
+            return serviceUnit
+        }
+
+        override fun getTotalDistance(): Float {
+            return serviceTotalDistance
+        }
+
+        override fun getTotalTime(): Float {
+            return serviceTotalTime
         }
     }
 
     override fun onBind(intent: Intent): IBinder {
-        Log.d(TAG,"onBind()")
+        Log.d(TAG, "onBind()")
         return binder
     }
 }
